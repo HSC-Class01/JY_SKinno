@@ -22,10 +22,6 @@ class DartClient:
         r = self.session.get(f"{BASE}/{endpoint}.json", params=q, timeout=60)
         r.raise_for_status()
         data = r.json()
-        # 013 means that DART has no matching filing/data. It is normal for
-        # some report types and must not stop the monthly job.
-        if data.get("status") == "013":
-            return {"status": "000", "list": [], "total_page": 1}
         if data.get("status") != "000":
             raise DartError(f"DART {data.get('status')}: {data.get('message')}")
         return data

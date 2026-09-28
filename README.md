@@ -64,18 +64,9 @@ Peer set은 SK이노베이션의 복합 사업구조를 고려한 **사업영역
 3. **New repository secret**
 4. Name: `DART_API_KEY`
 5. Secret: 발급받은 40자리 인증키
-6. 저장 후 **Actions → DART update and GitHub Pages → Run workflow**를 한 번 실행합니다.
+6. 저장 후 Actions에서 workflow를 수동 실행합니다.
 
 API key는 코드, README, CSV, dashboard에 넣지 마십시오.
-
-## 점검 및 오류 수정
-
-- 워크플로우 YAML의 `permissions:a` 오타를 `permissions:`로 수정했습니다. 이 오타는 GitHub Actions가 실행되기 전 YAML 파싱 단계에서 실패하는 원인이었습니다.
-- `data/raw`, `data/processed` 폴더가 처음 실행 시 없어도 자동 생성됩니다.
-- DART의 `013`(조회된 데이터 없음)은 일부 보고서 유형에서 정상적으로 발생할 수 있으므로, 해당 기간만 빈 결과로 처리하고 전체 월간 작업은 계속합니다.
-- GitHub Pages 배포 전 Repository → **Settings → Pages → Source: GitHub Actions**를 반드시 선택해야 합니다.
-
-> GitHub Actions의 월간 스케줄은 `0 0 1 * *`이며 UTC 기준입니다. 한국 시간으로 매월 1일 오전 9시에 실행됩니다. GitHub의 스케줄 작업은 지연될 수 있으므로, 즉시 반영이 필요하면 Actions에서 수동 실행하세요.
 
 ## 파일 구조
 
@@ -95,9 +86,3 @@ JY_SKinno/
 ├─ requirements.txt
 └─ README.md
 ```
-
-## 업로드용 ZIP 안내
-
-이 ZIP에는 숨김 파일/폴더를 넣지 않았습니다. GitHub Actions 워크플로우 파일은 ZIP 최상위의 `update-and-deploy.yml`입니다.
-
-GitHub Actions를 활성화하려면 이 파일을 GitHub 저장소에서 **`.github/workflows/update-and-deploy.yml`** 경로로 이동하거나, GitHub 웹에서 그 경로로 새 파일을 만든 뒤 `update-and-deploy.yml`의 내용을 붙여넣으세요. `.github/workflows`는 GitHub Actions가 워크플로우를 인식하기 위해 요구하는 고정 경로입니다.
