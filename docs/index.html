@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SK이노베이션 Financial Dashboard</title>
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<style>
+body{font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f6f8fb;color:#172033;margin:0}
+.wrap{max-width:1280px;margin:auto;padding:32px 22px 70px} header{background:#111827;color:white;border-radius:20px;padding:28px 30px;margin-bottom:22px}
+h1{margin:0 0 8px;font-size:30px} .sub{opacity:.78} .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:18px 0}
+.card{background:white;border:1px solid #e5e7eb;border-radius:16px;padding:18px;box-shadow:0 4px 18px rgba(17,24,39,.05)}
+.label{font-size:12px;color:#6b7280} .value{font-size:25px;font-weight:700;margin-top:7px} .section{margin-top:24px} h2{font-size:20px}
+.chart{background:white;border:1px solid #e5e7eb;border-radius:16px;padding:8px;margin:14px 0} table{width:100%;border-collapse:collapse;background:white;border-radius:14px;overflow:hidden}
+th,td{padding:10px 12px;border-bottom:1px solid #edf0f4;text-align:right;white-space:nowrap} th{background:#f1f5f9;color:#475569;font-size:12px} th:first-child,td:first-child{text-align:left}
+.note{font-size:12px;color:#64748b;line-height:1.6} .pill{display:inline-block;padding:5px 9px;background:#eef2ff;border-radius:999px;font-size:12px}
+@media(max-width:900px){.grid{grid-template-columns:repeat(2,1fr)}.tablewrap{overflow-x:auto}}
+</style></head><body><div class="wrap">
+<header><h1>SK이노베이션 Financial Dashboard</h1><div class="sub">DART OpenAPI 기반 · 2010–현재 · 사업보고서 / 반기보고서 / 분기보고서</div></header>
+<div class="grid" id="cards"></div>
+<div class="section"><h2>Financial Trend</h2><div class="chart" id="trend"></div></div>
+<div class="section"><h2>Profitability & Stability</h2><div class="chart" id="ratios"></div></div>
+<div class="section"><h2>Annual</h2><div class="tablewrap" id="annual"></div></div>
+<div class="section"><h2>Half-year</h2><div class="tablewrap" id="half"></div></div>
+<div class="section"><h2>Quarterly</h2><div class="tablewrap" id="quarter"></div></div>
+<div class="section"><h2>Domestic Peer Firms</h2><table><thead><tr><th>기업</th><th>사업영역</th><th>상장여부</th><th>주요 비교영역</th></tr></thead><tbody><tr><td>S-OIL</td><td>정유/석유화학</td><td>상장</td><td>정유 및 석유화학</td></tr><tr><td>GS칼텍스</td><td>정유/석유화학</td><td>비상장</td><td>정유 및 석유화학</td></tr><tr><td>HD현대오일뱅크</td><td>정유/석유화학</td><td>비상장</td><td>정유 및 석유화학</td></tr><tr><td>LG에너지솔루션</td><td>배터리</td><td>상장</td><td>전기차·ESS 배터리</td></tr><tr><td>삼성SDI</td><td>배터리/소재</td><td>상장</td><td>배터리·전자재료</td></tr><tr><td>LG화학</td><td>화학/배터리 소재</td><td>상장</td><td>석유화학·첨단소재·배터리 소재</td></tr></tbody></table>
+<p class="note">Peer set은 SK이노베이션의 복합 사업구조를 고려한 국내 사업영역별 비교군이며, 우열 또는 투자등급을 의미하지 않습니다.</p></div>
+<p class="note">Source: Financial Supervisory Service OpenDART. Values are parsed from structured financial statements where available; 2010–2014 uses a conservative original-report fallback. Please compare with the filed report before external use.</p>
+</div><script>
+const DATA=[];
+const cols=["year","report_type","revenue","operating_profit","net_income","assets","liabilities","equity","current_assets","current_liabilities","cash","operating_cash_flow","operating_margin","net_margin","current_ratio","debt_to_equity","equity_ratio","asset_turnover"];
+const names={revenue:"매출액",operating_profit:"영업이익",net_income:"당기순이익",assets:"자산총계",liabilities:"부채총계",equity:"자본총계",current_assets:"유동자산",current_liabilities:"유동부채",cash:"현금및현금성자산",operating_cash_flow:"영업활동현금흐름",operating_margin:"영업이익률",net_margin:"순이익률",current_ratio:"유동비율",debt_to_equity:"부채비율",equity_ratio:"자기자본비율",asset_turnover:"총자산회전율"};
+function n(x){return x==null||Number.isNaN(Number(x))?"—":Number(x).toLocaleString("ko-KR",{maximumFractionDigits:2})}
+function pct(x){return x==null?"—":(Number(x)*100).toLocaleString("ko-KR",{maximumFractionDigits:2})+"%"}
+function table(id, arr){if(!arr.length){document.getElementById(id).innerHTML='<p class="note">데이터 없음</p>';return} let keys=cols.filter(k=>arr.some(r=>r[k]!=null)); let h='<table><thead><tr>'+keys.map(k=>'<th>'+ (names[k]||k) +'</th>').join('')+'</tr></thead><tbody>'; for(const r of arr) h+='<tr>'+keys.map(k=>'<td>'+(['operating_margin','net_margin','current_ratio','debt_to_equity','equity_ratio','roa','roe','debt_ratio'].includes(k)?pct(r[k]):n(r[k]))+'</td>').join('')+'</tr>'; h+='</tbody></table>'; document.getElementById(id).innerHTML=h}
+const sorted=[...DATA].sort((a,b)=>a.year-b.year); const latest=sorted[sorted.length-1]||{};
+document.getElementById('cards').innerHTML=[['최근연도',latest.year||'—'],['매출액',n(latest.revenue)],['영업이익',n(latest.operating_profit)],['당기순이익',n(latest.net_income)]].map(x=>'<div class="card"><div class="label">'+x[0]+'</div><div class="value">'+x[1]+'</div></div>').join('');
+const annual=sorted.filter(r=>r.report_type==='annual'), half=sorted.filter(r=>r.report_type==='half_year'), q=sorted.filter(r=>r.report_type.startsWith('quarterly'));
+table('annual',annual); table('half',half); table('quarter',q);
+const years=[...new Set(annual.map(r=>r.year))]; const by=k=>years.map(y=>{const r=annual.find(x=>x.year===y);return r? r[k]:null});
+Plotly.newPlot('trend',[{x:years,y:by('revenue'),name:'매출액',type:'scatter',mode:'lines+markers'},{x:years,y:by('operating_profit'),name:'영업이익',type:'scatter',mode:'lines+markers'},{x:years,y:by('net_income'),name:'당기순이익',type:'scatter',mode:'lines+markers'}],{margin:{t:20,r:20,l:55,b:45},legend:{orientation:'h'},yaxis:{title:'보고금액'}},{responsive:true});
+Plotly.newPlot('ratios',[{x:years,y:by('operating_margin').map(x=>x==null?null:x*100),name:'영업이익률',type:'scatter',mode:'lines+markers'},{x:years,y:by('net_margin').map(x=>x==null?null:x*100),name:'순이익률',type:'scatter',mode:'lines+markers'},{x:years,y:by('equity_ratio').map(x=>x==null?null:x*100),name:'자기자본비율',type:'scatter',mode:'lines+markers'},{x:years,y:by('roa').map(x=>x==null?null:x*100),name:'ROA',type:'scatter',mode:'lines+markers'},{x:years,y:by('roe').map(x=>x==null?null:x*100),name:'ROE',type:'scatter',mode:'lines+markers'}],{margin:{t:20,r:20,l:55,b:45},legend:{orientation:'h'},yaxis:{title:'%'}},{responsive:true});
+</script></body></html>
