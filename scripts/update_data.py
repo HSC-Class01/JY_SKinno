@@ -19,6 +19,9 @@ start = int(CFG["company"]["start_year"])
 end = pd.Timestamp.now().year
 account_map = CFG["financial_accounts"]
 
+(ROOT / "data/raw").mkdir(parents=True, exist_ok=True)
+(ROOT / "data/processed").mkdir(parents=True, exist_ok=True)
+
 rows = []
 report_rows = []
 
@@ -66,7 +69,7 @@ raw.to_csv(ROOT / "data/raw/reports.csv", index=False, encoding="utf-8-sig")
 
 out = transform(rows, account_map)
 if not out.empty:
-    out = out.drop_duplicates(["year", "report_type"], keep="last").sort_values(["year", "report_type"])
+    out = out.drop_duplicates(["year", "reprt_code"], keep="last").sort_values(["year", "reprt_code"])
 out.to_csv(ROOT / "data/processed/financials.csv", index=False, encoding="utf-8-sig")
 meta = {
     "company": CFG["company"],
