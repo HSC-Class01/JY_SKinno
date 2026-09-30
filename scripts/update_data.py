@@ -19,6 +19,11 @@ start = int(CFG["company"]["start_year"])
 end = pd.Timestamp.now().year
 account_map = CFG["financial_accounts"]
 
+# Create output directories on a clean GitHub Actions runner.
+(ROOT / "data/raw").mkdir(parents=True, exist_ok=True)
+(ROOT / "data/processed").mkdir(parents=True, exist_ok=True)
+(ROOT / "docs").mkdir(parents=True, exist_ok=True)
+
 rows = []
 report_rows = []
 
