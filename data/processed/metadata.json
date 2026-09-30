@@ -1,0 +1,12 @@
+{
+  "company": {
+    "name": "SK Innovation Co., Ltd.",
+    "corp_code": "00126380",
+    "stock_code": "096770",
+    "start_year": 2010,
+    "fs_div": "CFS"
+  },
+  "updated_at": "2026-09-30T16:49:54.623316+00:00",
+  "rows": 53,
+  "note": "OpenDART structured financial APIs provide data from 2015 onward; 2010-2014 uses original periodic-report fallback parsing."
+}
