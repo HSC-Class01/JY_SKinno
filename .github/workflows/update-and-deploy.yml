@@ -10,7 +10,7 @@ on:
       - "data/**"
       - "docs/index.html"
 
-permissions:a
+permissions:
   contents: write
   pages: write
   id-token: write
