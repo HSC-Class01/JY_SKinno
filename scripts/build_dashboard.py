@@ -27,14 +27,14 @@ html = f'''<!doctype html>
 <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
 <style>
 body{{font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f6f8fb;color:#172033;margin:0}}
-.wrap{{max-width:1280px;margin:auto;padding:32px 22px 70px}} header{{background:#111827;color:white;border-radius:20px;padding:28px 30px;margin-bottom:22px}}
+.wrap{{width:min(100% - 32px,1400px);margin:auto;padding:28px 0 70px;box-sizing:border-box}} header{{background:#111827;color:white;border-radius:20px;padding:28px 30px;margin-bottom:22px}}
 h1{{margin:0 0 8px;font-size:30px}} .sub{{opacity:.78}} .grid{{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:18px 0}}
 .card{{background:white;border:1px solid #e5e7eb;border-radius:16px;padding:18px;box-shadow:0 4px 18px rgba(17,24,39,.05)}}
 .label{{font-size:12px;color:#6b7280}} .value{{font-size:25px;font-weight:700;margin-top:7px}} .section{{margin-top:24px}} h2{{font-size:20px}}
-.chart{{background:white;border:1px solid #e5e7eb;border-radius:16px;padding:8px;margin:14px 0}} table{{width:100%;border-collapse:collapse;background:white;border-radius:14px;overflow:hidden}}
-th,td{{padding:10px 12px;border-bottom:1px solid #edf0f4;text-align:right;white-space:nowrap}} th{{background:#f1f5f9;color:#475569;font-size:12px}} th:first-child,td:first-child{{text-align:left}}
+.chart{{background:white;border:1px solid #e5e7eb;border-radius:16px;padding:8px;margin:14px 0;min-width:0;overflow:hidden}} .chart>div{{width:100%!important;min-width:0}} .tablewrap{{width:100%;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;background:white;border:1px solid #e5e7eb;border-radius:14px}} table{{width:100%;min-width:1180px;border-collapse:collapse;background:white}}
+th,td{{padding:10px 12px;border-bottom:1px solid #edf0f4;text-align:right;white-space:nowrap;box-sizing:border-box}} th{{background:#f1f5f9;color:#475569;font-size:12px}} th:first-child,td:first-child{{text-align:left}}
 .note{{font-size:12px;color:#64748b;line-height:1.6}} .pill{{display:inline-block;padding:5px 9px;background:#eef2ff;border-radius:999px;font-size:12px}}
-@media(max-width:900px){{.grid{{grid-template-columns:repeat(2,1fr)}}.tablewrap{{overflow-x:auto}}}}
+@media(max-width:900px){{.wrap{{width:min(100% - 20px,1400px);padding-top:16px}}.grid{{grid-template-columns:repeat(2,1fr)}}h1{{font-size:24px}}.chart{{padding:4px}}}} @media(max-width:600px){{.grid{{grid-template-columns:1fr}}header{{padding:22px}}.section{{margin-top:20px}}h2{{font-size:18px}}.chart{{border-radius:12px}}}}
 </style></head><body><div class="wrap">
 <header><h1>SK이노베이션 Financial Dashboard</h1><div class="sub">DART OpenAPI 기반 · 2010–현재 · 사업보고서 / 반기보고서 / 분기보고서</div></header>
 <div class="grid" id="cards"></div>
@@ -58,7 +58,7 @@ document.getElementById('cards').innerHTML=[['최근연도',latest.year||'—'],
 const annual=sorted.filter(r=>r.report_type==='annual'), half=sorted.filter(r=>r.report_type==='half_year'), q=sorted.filter(r=>r.report_type.startsWith('quarterly'));
 table('annual',annual); table('half',half); table('quarter',q);
 const years=[...new Set(annual.map(r=>r.year))]; const by=k=>years.map(y=>{{const r=annual.find(x=>x.year===y);return r? r[k]:null}});
-Plotly.newPlot('trend',[{{x:years,y:by('revenue'),name:'매출액',type:'scatter',mode:'lines+markers'}},{{x:years,y:by('operating_profit'),name:'영업이익',type:'scatter',mode:'lines+markers'}},{{x:years,y:by('net_income'),name:'당기순이익',type:'scatter',mode:'lines+markers'}}],{{margin:{{t:20,r:20,l:55,b:45}},legend:{{orientation:'h'}},yaxis:{{title:'보고금액'}}}},{{responsive:true}});
-Plotly.newPlot('ratios',[{{x:years,y:by('operating_margin').map(x=>x==null?null:x*100),name:'영업이익률',type:'scatter',mode:'lines+markers'}},{{x:years,y:by('net_margin').map(x=>x==null?null:x*100),name:'순이익률',type:'scatter',mode:'lines+markers'}},{{x:years,y:by('equity_ratio').map(x=>x==null?null:x*100),name:'자기자본비율',type:'scatter',mode:'lines+markers'}},{{x:years,y:by('roa').map(x=>x==null?null:x*100),name:'ROA',type:'scatter',mode:'lines+markers'}},{{x:years,y:by('roe').map(x=>x==null?null:x*100),name:'ROE',type:'scatter',mode:'lines+markers'}}],{{margin:{{t:20,r:20,l:55,b:45}},legend:{{orientation:'h'}},yaxis:{{title:'%'}}}},{{responsive:true}});
-</script></body></html>'''
-(ROOT / "docs/index.html").write_text(html, encoding="utf-8")
+const commonLayout={{autosize:true,height:420,margin:{{t:18,r:24,l:70,b:90}},legend:{{orientation:'h',x:0,y:-0.22,xanchor:'left',yanchor:'top'}},hovermode:'x unified',paper_bgcolor:'white',plot_bgcolor:'white'}};
+Plotly.newPlot('trend',[{{x:years,y:by('revenue'),name:'매출액',type:'scatter',mode:'lines+markers'}},{{x:years,y:by('operating_profit'),name:'영업이익',type:'scatter',mode:'lines+markers'}},{{x:years,y:by('net_income'),name:'당기순이익',type:'scatter',mode:'lines+markers'}}],{{...commonLayout,yaxis:{{title:'보고금액',automargin:true}}}},{{responsive:true,displaylogo:false}});
+Plotly.newPlot('ratios',[{{x:years,y:by('operating_margin').map(x=>x==null?null:x*100),name:'영업이익률',type:'scatter',mode:'lines+markers'}},{{x:years,y:by('net_margin').map(x=>x==null?null:x*100),name:'순이익률',type:'scatter',mode:'lines+markers'}},{{x:years,y:by('equity_ratio').map(x=>x==null?null:x*100),name:'자기자본비율',type:'scatter',mode:'lines+markers'}},{{x:years,y:by('roa').map(x=>x==null?null:x*100),name:'ROA',type:'scatter',mode:'lines+markers'}},{{x:years,y:by('roe').map(x=>x==null?null:x*100),name:'ROE',type:'scatter',mode:'lines+markers'}}],{{...commonLayout,yaxis:{{title:'%',automargin:true}}}},{{responsive:true,displaylogo:false}});
+window.addEventListener('resize',()=>{{Plotly.Plots.resize('trend');Plotly.Plots.resize('ratios')}});
