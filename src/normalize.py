@@ -31,15 +31,22 @@ def pick(accounts, names, exclude_terms=()):
     wanted = [norm(x) for x in names]
     excluded = [norm(x) for x in exclude_terms]
 
-    def allowed(account_name):
-        normalized = norm(account_name)
+    def allowed(account):
+        # DART may expose the parent-attributable and non-controlling portions
+        # under similar account names. The account_detail field distinguishes
+        # those rows from consolidated profit for the period.
+        metadata = " ".join((
+            str(account.get("account_nm", "")),
+            str(account.get("account_detail", "")),
+        ))
+        normalized = norm(metadata)
         return not any(term in normalized for term in excluded)
 
     # Continue past empty matching rows. Some DART filings contain multiple
     # similar labels, where a blank row precedes the populated statement row.
     for a in accounts:
         name = a.get("account_nm", "")
-        if norm(name) in wanted and allowed(name):
+        if norm(name) in wanted and allowed(a):
             value = num(a.get("thstrm_amount"))
             if value is not None:
                 return value
@@ -47,7 +54,7 @@ def pick(accounts, names, exclude_terms=()):
     for a in accounts:
         name = a.get("account_nm", "")
         normalized = norm(name)
-        if allowed(name) and any(w in normalized for w in wanted):
+        if allowed(a) and any(w in normalized for w in wanted):
             value = num(a.get("thstrm_amount"))
             if value is not None:
                 return value
