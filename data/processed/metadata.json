@@ -1,12 +1,15 @@
 {
   "company": {
     "name": "SK Innovation Co., Ltd.",
-    "corp_code": "00126380",
+    "corp_code": "00631518",
     "stock_code": "096770",
     "start_year": 2010,
-    "fs_div": "CFS"
+    "fs_div": "CFS",
+    "verified_corp_name": "SK이노베이션(주)"
   },
-  "updated_at": "2026-09-30T16:49:54.623316+00:00",
-  "rows": 53,
-  "note": "OpenDART structured financial APIs provide data from 2015 onward; 2010-2014 uses original periodic-report fallback parsing."
+  "updated_at": "2026-11-01T09:29:20.178241+00:00",
+  "rows": 63,
+  "reports": 67,
+  "revenue_observations": 43,
+  "note": "OpenDART financial statements are used from 2015 onward. Earlier periods are included only when original-report parsing returns actual values. Report IDs are taken from the matching financial statement response or the exact fiscal-period filing."
 }
