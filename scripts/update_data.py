@@ -173,11 +173,21 @@ for year in range(START_YEAR, END_YEAR + 1):
                 rcept_no = str(report["rcept_no"])
                 document = client.unzip_text(client.download_document(rcept_no))
                 values = extract_legacy(document, CFG["financial_accounts"])
-                if any(value is not None for value in values.values()):
+                # extract_legacy returns normalized field keys, whereas transform()
+                # resolves DART account labels. Map each value back to its first
+                # configured Korean account label before running the common pipeline.
+                core_fields = (
+                    "revenue", "operating_profit", "net_income",
+                    "assets", "liabilities", "equity",
+                )
+                if any(values.get(key) is not None for key in core_fields):
                     accounts = [
-                        {"account_nm": key, "thstrm_amount": value}
+                        {
+                            "account_nm": CFG["financial_accounts"][key][0],
+                            "thstrm_amount": value,
+                        }
                         for key, value in values.items()
-                        if value is not None
+                        if value is not None and CFG["financial_accounts"].get(key)
                     ]
                     rows.append({
                         "year": year,
