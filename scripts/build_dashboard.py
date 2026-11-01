@@ -123,7 +123,8 @@ td a{color:#2563eb;text-decoration:none}td a:hover{text-decoration:underline}
 <script>
 const DATA=__DATA__;
 const amountKeys=new Set(["revenue","operating_profit","net_income","assets","liabilities","equity","current_assets","current_liabilities","cash","borrowings","operating_cash_flow","capex"]);
-const ratioKeys=new Set(["operating_margin","net_margin","current_ratio","debt_to_equity","equity_ratio","asset_turnover","roa","roe","debt_ratio"]);
+const ratioKeys=new Set(["operating_margin","net_margin","current_ratio","debt_to_equity","equity_ratio","roa","roe","debt_ratio"]);
+const multipleKeys=new Set(["asset_turnover"]);
 const cols=["year","report_type","revenue","operating_profit","net_income","assets","liabilities","equity","current_assets","current_liabilities","cash","borrowings","operating_cash_flow","capex","operating_margin","net_margin","current_ratio","debt_to_equity","equity_ratio","asset_turnover","roa","roe","debt_ratio","rcept_no"];
 const names={year:"연도",report_type:"보고서",revenue:"매출액",operating_profit:"영업이익",net_income:"당기순이익",assets:"자산총계",liabilities:"부채총계",equity:"자본총계",current_assets:"유동자산",current_liabilities:"유동부채",cash:"현금및현금성자산",borrowings:"차입금",operating_cash_flow:"영업활동현금흐름",capex:"유형자산 취득",operating_margin:"영업이익률",net_margin:"순이익률",current_ratio:"유동비율",debt_to_equity:"부채/자본",equity_ratio:"자기자본비율",asset_turnover:"총자산회전율",roa:"ROA",roe:"ROE",debt_ratio:"부채/자산",rcept_no:"DART 원문"};
 const reportNames={annual:"사업보고서",half_year:"반기보고서",quarterly_q1:"1분기",quarterly_q3:"3분기"};
@@ -148,6 +149,7 @@ function renderTable(id,arr){
    if(k==="report_type") return '<td>'+ (reportNames[row[k]]||row[k])+'</td>';
    if(k==="rcept_no") return '<td>'+(row[k]?'<a href="https://dart.fss.or.kr/dsaf001/main.do?rcpNo='+encodeURIComponent(row[k])+'" target="_blank" rel="noopener">원문 보기</a>':"—")+'</td>';
    if(amountKeys.has(k)) return '<td>'+won(row[k])+'</td>';
+   if(multipleKeys.has(k)) return '<td>'+fmt(row[k],2)+'x</td>';
    if(ratioKeys.has(k)) return '<td>'+pct(row[k])+'</td>';
    return '<td>'+fmt(row[k],0)+'</td>';
   }).join("")+'</tr>';
