@@ -103,7 +103,7 @@ td a{color:#2563eb;text-decoration:none}td a:hover{text-decoration:underline}
 <div class="wrap">
 <header>
 <h1>SK이노베이션 Financial Dashboard</h1>
-<div class="sub">DART OpenAPI 기반 · 2010–현재 · 사업보고서 / 반기보고서 / 분기보고서</div>
+<div class="sub">DART OpenAPI 기반 · 재무 데이터 2015–현재 · 보고서 목록 2010–현재</div>
 <div class="sub">종목코드 096770 · 재무 금액 단위: 억 원</div>
 </header>
 <div class="grid" id="cards"></div>
