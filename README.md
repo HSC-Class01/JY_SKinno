@@ -1,19 +1,17 @@
 # SK이노베이션 DART Financial Agent
 
-<p align="center">
-  <a href="https://hsc-class01.github.io/JY_SKinno/" target="_blank" rel="noopener">
-    <img src="https://www.skinnovation.co.kr/resources/images/contents/company/logo-mark.svg" height="42" alt="SK Happy Wing symbol" />
-    <img src="https://www.skinnovation.co.kr/resources/images/contents/company/logo-txt.svg" height="30" alt="SK wordmark" />
-    <br />
-    <strong>SK INNOVATION · FINANCIAL DASHBOARD 바로가기 ↗</strong>
-  </a>
-</p>
-
 DART OpenAPI를 이용해 SK이노베이션의 정기보고서 재무 데이터를 수집하고, 주요 재무수치와 재무비율을 계산한 뒤 GitHub Pages 대시보드로 공개하는 자동화 프로젝트입니다.
 
 ## Dashboard
 
-**[🔗 대시보드 바로가기](https://hsc-class01.github.io/JY_SKinno/)**
+<p align="center">
+  <a href="https://hsc-class01.github.io/JY_SKinno/" target="_blank" rel="noopener">
+    <img src="https://www.skinnovation.co.kr/resources/images/contents/company/logo-mark.svg" height="46" alt="SK이노베이션 행복날개 심볼" />
+    <img src="https://www.skinnovation.co.kr/resources/images/contents/company/logo-txt.svg" height="34" alt="SK이노베이션 워드마크" />
+    <br />
+    <kbd><strong>FINANCIAL DASHBOARD · 대시보드 바로가기 ↗</strong></kbd>
+  </a>
+</p>
 
 ## 데이터 무결성
 
