@@ -1,83 +1,200 @@
 from __future__ import annotations
-import os
+
 import json
+import os
 import sys
 from pathlib import Path
+
 import pandas as pd
 import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
+
 from src.dart_client import DartClient
 from src.normalize import REPORT_NAMES, transform
 from src.legacy import extract_legacy
 
-CFG = yaml.safe_load((ROOT / "config.yaml").read_text(encoding="utf-8"))
-client = DartClient(os.environ.get("DART_API_KEY"))
-corp = CFG["company"]["corp_code"]
-start = int(CFG["company"]["start_year"])
-end = pd.Timestamp.now().year
-account_map = CFG["financial_accounts"]
 
-# Create output directories on a clean GitHub Actions runner.
-(ROOT / "data/raw").mkdir(parents=True, exist_ok=True)
-(ROOT / "data/processed").mkdir(parents=True, exist_ok=True)
-(ROOT / "docs").mkdir(parents=True, exist_ok=True)
+CFG = yaml.safe_load((ROOT / "config.yaml").read_text(encoding="utf-8"))
+COMPANY = CFG["company"]
+CORP_CODE = str(COMPANY["corp_code"]).zfill(8)
+STOCK_CODE = str(COMPANY["stock_code"]).zfill(6)
+START_YEAR = int(COMPANY["start_year"])
+END_YEAR = pd.Timestamp.now().year
+
+for output_dir in (
+    ROOT / "data/raw",
+    ROOT / "data/processed",
+    ROOT / "docs",
+):
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+client = DartClient(os.environ.get("DART_API_KEY"))
+
+# Fail before touching output files if the configured DART ID points to another issuer.
+profile = client.company(CORP_CODE)
+actual_stock_code = str(profile.get("stock_code", "")).zfill(6)
+actual_name = str(profile.get("corp_name", ""))
+if actual_stock_code != STOCK_CODE:
+    raise RuntimeError(
+        "DART company identity mismatch: "
+        f"configured={COMPANY['name']} ({STOCK_CODE}/{CORP_CODE}), "
+        f"API={actual_name} ({actual_stock_code}/{CORP_CODE}). "
+        "No output files were overwritten."
+    )
+
+# Search a filing window wide enough to include the next-year annual report.
+today = pd.Timestamp.now().normalize()
+report_end = (today + pd.Timedelta(days=120)).strftime("%Y%m%d")
+all_reports = client.reports(CORP_CODE, f"{START_YEAR}0101", report_end)
+
+# Keep only this issuer's periodic reports and verify the issuer on each row.
+periodic_reports = []
+for report in all_reports:
+    report_corp = str(report.get("corp_code", "")).zfill(8)
+    report_stock = str(report.get("stock_code", "")).zfill(6)
+    report_name = str(report.get("report_nm", ""))
+    if report_corp != CORP_CODE or report_stock not in ("", STOCK_CODE):
+        continue
+    if not any(term in report_name for term in (
+        "사업보고서", "반기보고서", "분기보고서"
+    )):
+        continue
+    if "정정" in report_name:
+        continue
+    periodic_reports.append(report)
+
+def find_periodic_report(year: int, code: str):
+    month = {
+        "11011": "12",
+        "11012": "06",
+        "11013": "03",
+        "11014": "09",
+    }[code]
+    period = f"({year}.{month})"
+    keyword = "사업보고서" if code == "11011" else (
+        "반기보고서" if code == "11012" else "분기보고서"
+    )
+    candidates = [
+        report for report in periodic_reports
+        if keyword in str(report.get("report_nm", ""))
+        and period in str(report.get("report_nm", ""))
+    ]
+    return candidates[-1] if candidates else None
+
 
 rows = []
 report_rows = []
+for report in periodic_reports:
+    item = dict(report)
+    item["dart_url"] = (
+        "https://dart.fss.or.kr/dsaf001/main.do?rcpNo="
+        + str(report.get("rcept_no", ""))
+    )
+    report_rows.append(item)
 
-for year in range(start, end + 1):
-    # One report-list request per year. This is also used to record DART receipt links.
-    reports = client.reports(corp, f"{year}0101", f"{year}1231")
-    for r in reports:
-        name = r.get("report_nm", "")
-        if any(x in name for x in ("사업보고서", "반기보고서", "분기보고서")) and "정정" not in name:
-            report_rows.append(r)
-
+for year in range(START_YEAR, END_YEAR + 1):
     for code, label in REPORT_NAMES.items():
+        report = find_periodic_report(year, code)
         try:
             if year >= 2015:
-                accounts = client.financial_statements(corp, year, code, CFG["company"]["fs_div"])
-                if not accounts:
-                    accounts = client.financial_statements(corp, year, code, "OFS")
+                accounts = client.financial_statements(
+                    CORP_CODE, year, code, COMPANY.get("fs_div", "CFS")
+                )
+                if not accounts and COMPANY.get("fs_div", "CFS") == "CFS":
+                    accounts = client.financial_statements(
+                        CORP_CODE, year, code, "OFS"
+                    )
                 if accounts:
-                    target_name = {"11011":"사업보고서", "11012":"반기보고서", "11013":"1분기보고서", "11014":"3분기보고서"}[code]
-                    matching = [x for x in reports if target_name in x.get("report_nm", "") and "정정" not in x.get("report_nm", "")]
-                    rcp = matching[-1].get("rcept_no") if matching else None
-                    rows.append({"year": year, "report_type": label, "reprt_code": code,
-                                 "accounts": accounts, "rcept_no": rcp})
-            else:
-                target = {"11011":"사업보고서", "11012":"반기보고서", "11013":"분기보고서", "11014":"분기보고서"}[code]
-                candidates = [x for x in reports if target in x.get("report_nm", "") and "정정" not in x.get("report_nm", "")]
-                if code == "11013":
-                    candidates = [x for x in candidates if "1분기" in x.get("report_nm", "")]
-                elif code == "11014":
-                    candidates = [x for x in candidates if "3분기" in x.get("report_nm", "")]
-                if candidates:
-                    doc = candidates[-1]
-                    txt = client.unzip_text(client.download_document(doc["rcept_no"]))
-                    vals = extract_legacy(txt, account_map)
-                    accounts = [{"account_nm": k, "thstrm_amount": v} for k, v in vals.items() if v is not None]
-                    rows.append({"year": year, "report_type": label, "reprt_code": code,
-                                 "accounts": accounts, "rcept_no": doc["rcept_no"]})
+                    rcept_no = (
+                        accounts[0].get("rcept_no")
+                        or (report or {}).get("rcept_no")
+                    )
+                    rows.append({
+                        "year": year,
+                        "report_type": label,
+                        "reprt_code": code,
+                        "accounts": accounts,
+                        "rcept_no": str(rcept_no) if rcept_no else None,
+                    })
+            elif report:
+                # DART structured statements are not available for these early years.
+                # Keep an observation only when the original filing yields actual values.
+                rcept_no = str(report["rcept_no"])
+                document = client.unzip_text(client.download_document(rcept_no))
+                values = extract_legacy(document, CFG["financial_accounts"])
+                if any(value is not None for value in values.values()):
+                    accounts = [
+                        {"account_nm": key, "thstrm_amount": value}
+                        for key, value in values.items()
+                        if value is not None
+                    ]
+                    rows.append({
+                        "year": year,
+                        "report_type": label,
+                        "reprt_code": code,
+                        "accounts": accounts,
+                        "rcept_no": rcept_no,
+                    })
         except Exception as exc:
             print(f"WARN {year} {code}: {exc}", file=sys.stderr)
 
+if not rows:
+    raise RuntimeError(
+        f"No financial observations were retrieved for {COMPANY['name']}."
+    )
+
+# Transform and validate before replacing the currently published dataset.
+out = transform(rows, CFG["financial_accounts"])
+if out.empty or out["revenue"].notna().sum() == 0:
+    raise RuntimeError(
+        "No revenue observations were extracted. "
+        "The existing published data was left unchanged."
+    )
+
+out = out.drop_duplicates(
+    ["year", "report_type"], keep="last"
+).sort_values(["year", "report_type"]).reset_index(drop=True)
+
 raw = pd.DataFrame(report_rows)
 if not raw.empty:
-    raw["dart_url"] = raw["rcept_no"].map(lambda x: f"https://dart.fss.or.kr/dsaf001/main.do?rcpNo={x}")
-raw.to_csv(ROOT / "data/raw/reports.csv", index=False, encoding="utf-8-sig")
+    raw["corp_code"] = raw["corp_code"].astype(str).str.zfill(8)
+    raw["stock_code"] = raw["stock_code"].fillna("").astype(str).str.zfill(6)
+    if set(raw["corp_code"].dropna()) - {CORP_CODE}:
+        raise RuntimeError("Mixed issuer codes detected in reports; export cancelled.")
 
-out = transform(rows, account_map)
-if not out.empty:
-    out = out.drop_duplicates(["year", "report_type"], keep="last").sort_values(["year", "report_type"])
-out.to_csv(ROOT / "data/processed/financials.csv", index=False, encoding="utf-8-sig")
-meta = {
-    "company": CFG["company"],
-    "updated_at": pd.Timestamp.utcnow().isoformat(),
+raw.to_csv(
+    ROOT / "data/raw/reports.csv", index=False, encoding="utf-8-sig"
+)
+out.to_csv(
+    ROOT / "data/processed/financials.csv",
+    index=False,
+    encoding="utf-8-sig",
+)
+metadata = {
+    "company": {
+        **COMPANY,
+        "corp_code": CORP_CODE,
+        "stock_code": STOCK_CODE,
+        "verified_corp_name": actual_name,
+    },
+    "updated_at": pd.Timestamp.now(tz="UTC").isoformat(),
     "rows": int(len(out)),
-    "note": "OpenDART structured financial APIs provide data from 2015 onward; 2010-2014 uses original periodic-report fallback parsing."
+    "reports": int(len(raw)),
+    "revenue_observations": int(out["revenue"].notna().sum()),
+    "note": (
+        "OpenDART financial statements are used from 2015 onward. "
+        "Earlier periods are included only when original-report parsing "
+        "returns actual values. Report IDs are taken from the matching "
+        "financial statement response or the exact fiscal-period filing."
+    ),
 }
-(ROOT / "data/processed/metadata.json").write_text(json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8")
-print(f"Saved {len(out)} financial observations and {len(raw)} report records.")
+(ROOT / "data/processed/metadata.json").write_text(
+    json.dumps(metadata, ensure_ascii=False, indent=2),
+    encoding="utf-8",
+)
+print(
+    f"Saved {len(out)} financial observations and {len(raw)} periodic reports "
+    f"for {actual_name} ({STOCK_CODE}/{CORP_CODE})."
+)
