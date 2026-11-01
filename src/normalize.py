@@ -1,4 +1,5 @@
 from __future__ import annotations
+import math
 import re
 import pandas as pd
 
@@ -19,21 +20,37 @@ def num(x):
     s = s.strip("()")
     try:
         v = float(s)
+        if not math.isfinite(v):
+            return None
         return -v if neg else v
     except ValueError:
         return None
 
-def pick(accounts, names):
+def pick(accounts, names, exclude_terms=()):
     norm = lambda x: re.sub(r"\s+", "", str(x)).lower()
     wanted = [norm(x) for x in names]
+    excluded = [norm(x) for x in exclude_terms]
+
+    def allowed(account_name):
+        normalized = norm(account_name)
+        return not any(term in normalized for term in excluded)
+
+    # Continue past empty matching rows. Some DART filings contain multiple
+    # similar labels, where a blank row precedes the populated statement row.
     for a in accounts:
-        n = norm(a.get("account_nm", ""))
-        if n in wanted:
-            return num(a.get("thstrm_amount"))
+        name = a.get("account_nm", "")
+        if norm(name) in wanted and allowed(name):
+            value = num(a.get("thstrm_amount"))
+            if value is not None:
+                return value
+
     for a in accounts:
-        n = norm(a.get("account_nm", ""))
-        if any(w in n for w in wanted):
-            return num(a.get("thstrm_amount"))
+        name = a.get("account_nm", "")
+        normalized = norm(name)
+        if allowed(name) and any(w in normalized for w in wanted):
+            value = num(a.get("thstrm_amount"))
+            if value is not None:
+                return value
     return None
 
 def safe_div(a, b):
@@ -49,7 +66,11 @@ def transform(rows, account_map):
             "reprt_code": r["reprt_code"], "rcept_no": r.get("rcept_no")
         }
         for key, names in account_map.items():
-            rec[key] = pick(r["accounts"], names)
+            exclusions = (
+                "지배기업", "소유주", "귀속", "비지배",
+                "controlling", "noncontrolling", "attributable",
+            ) if key == "net_income" else ()
+            rec[key] = pick(r["accounts"], names, exclude_terms=exclusions)
         rec["operating_margin"] = safe_div(rec["operating_profit"], rec["revenue"])
         rec["net_margin"] = safe_div(rec["net_income"], rec["revenue"])
         rec["current_ratio"] = safe_div(rec["current_assets"], rec["current_liabilities"])
