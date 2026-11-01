@@ -160,6 +160,28 @@ for year in range(START_YEAR, END_YEAR + 1):
                     CORP_CODE, year, code, "OFS"
                 )
             if accounts:
+                # Emit a compact audit trail for recent profit/loss labels. This
+                # helps detect taxonomy changes without exposing API credentials.
+                if year in (2025, 2026) and code in ("11011", "11012", "11013"):
+                    audit_accounts = [
+                        {
+                            "account_id": item.get("account_id"),
+                            "account_nm": item.get("account_nm"),
+                            "account_detail": item.get("account_detail"),
+                            "sj_nm": item.get("sj_nm"),
+                            "thstrm_amount": item.get("thstrm_amount"),
+                            "thstrm_add_amount": item.get("thstrm_add_amount"),
+                        }
+                        for item in accounts
+                        if any(
+                            token in str(item.get("account_nm", ""))
+                            for token in ("순", "손익", "영업")
+                        )
+                    ]
+                    print(
+                        f"ACCOUNT_AUDIT {year} {code}: "
+                        + json.dumps(audit_accounts, ensure_ascii=False)
+                    )
                 rcept_no = (
                     accounts[0].get("rcept_no")
                     or (report or {}).get("rcept_no")
