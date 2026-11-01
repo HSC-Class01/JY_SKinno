@@ -7,9 +7,9 @@
     "fs_div": "CFS",
     "verified_corp_name": "SK이노베이션(주)"
   },
-  "updated_at": "2026-11-01T09:29:20.178241+00:00",
+  "updated_at": "2026-11-01T09:32:11.755173+00:00",
   "rows": 63,
   "reports": 67,
-  "revenue_observations": 43,
+  "revenue_observations": 63,
   "note": "OpenDART financial statements are used from 2015 onward. Earlier periods are included only when original-report parsing returns actual values. Report IDs are taken from the matching financial statement response or the exact fiscal-period filing."
 }
