@@ -1,6 +1,13 @@
 # SK이노베이션 DART Financial Agent
 
-<p align="center"><a href="https://hsc-class01.github.io/JY_SKinno/"><img src="https://img.shields.io/badge/%F0%9F%94%97%20%EB%8C%80%EC%8B%9C%EB%B3%B4%EB%93%9C%20%EB%B0%94%EB%A1%9C%EA%B0%80%EA%B8%B0-2F80ED?style=for-the-badge&logo=github&logoColor=white" alt="대시보드 바로가기"></a></p>
+<p align="center">
+  <a href="https://hsc-class01.github.io/JY_SKinno/" target="_blank" rel="noopener">
+    <img src="https://www.skinnovation.co.kr/resources/images/contents/company/logo-mark.svg" height="42" alt="SK Happy Wing symbol" />
+    <img src="https://www.skinnovation.co.kr/resources/images/contents/company/logo-txt.svg" height="30" alt="SK wordmark" />
+    <br />
+    <strong>SK INNOVATION · FINANCIAL DASHBOARD 바로가기 ↗</strong>
+  </a>
+</p>
 
 DART OpenAPI를 이용해 SK이노베이션의 정기보고서 재무 데이터를 수집하고, 주요 재무수치와 재무비율을 계산한 뒤 GitHub Pages 대시보드로 공개하는 자동화 프로젝트입니다.
 
