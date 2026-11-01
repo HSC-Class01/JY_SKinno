@@ -44,20 +44,25 @@ def pick(accounts, names, exclude_terms=()):
 
     # Continue past empty matching rows. Some DART filings contain multiple
     # similar labels, where a blank row precedes the populated statement row.
-    for a in accounts:
-        name = a.get("account_nm", "")
-        if norm(name) in wanted and allowed(a):
-            value = num(a.get("thstrm_amount"))
-            if value is not None:
-                return value
+    # Respect the order of account aliases: consolidated total-profit labels
+    # are listed before generic labels that may also match owner-attributable
+    # components in the same statement.
+    for wanted_name in wanted:
+        for a in accounts:
+            name = a.get("account_nm", "")
+            if norm(name) == wanted_name and allowed(a):
+                value = num(a.get("thstrm_amount"))
+                if value is not None:
+                    return value
 
-    for a in accounts:
-        name = a.get("account_nm", "")
-        normalized = norm(name)
-        if allowed(a) and any(w in normalized for w in wanted):
-            value = num(a.get("thstrm_amount"))
-            if value is not None:
-                return value
+    for wanted_name in wanted:
+        for a in accounts:
+            name = a.get("account_nm", "")
+            normalized = norm(name)
+            if wanted_name in normalized and allowed(a):
+                value = num(a.get("thstrm_amount"))
+                if value is not None:
+                    return value
     return None
 
 def safe_div(a, b):
