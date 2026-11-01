@@ -13,7 +13,6 @@ sys.path.insert(0, str(ROOT))
 
 from src.dart_client import DartClient, DartError
 from src.normalize import REPORT_NAMES, transform
-from src.legacy import extract_legacy
 
 
 CFG = yaml.safe_load((ROOT / "config.yaml").read_text(encoding="utf-8"))
@@ -144,58 +143,34 @@ for report in periodic_reports:
     report_rows.append(item)
 
 for year in range(START_YEAR, END_YEAR + 1):
+    # DART's structured financial-statement endpoint provides consistent
+    # machine-readable account values from 2015 onward. Older filing records
+    # remain in reports.csv, but are intentionally excluded from numeric
+    # analysis until a table-structure parser is validated against the filings.
+    if year < 2015:
+        continue
     for code, label in REPORT_NAMES.items():
         report = find_periodic_report(year, code)
         try:
-            if year >= 2015:
+            accounts = client.financial_statements(
+                CORP_CODE, year, code, COMPANY.get("fs_div", "CFS")
+            )
+            if not accounts and COMPANY.get("fs_div", "CFS") == "CFS":
                 accounts = client.financial_statements(
-                    CORP_CODE, year, code, COMPANY.get("fs_div", "CFS")
+                    CORP_CODE, year, code, "OFS"
                 )
-                if not accounts and COMPANY.get("fs_div", "CFS") == "CFS":
-                    accounts = client.financial_statements(
-                        CORP_CODE, year, code, "OFS"
-                    )
-                if accounts:
-                    rcept_no = (
-                        accounts[0].get("rcept_no")
-                        or (report or {}).get("rcept_no")
-                    )
-                    rows.append({
-                        "year": year,
-                        "report_type": label,
-                        "reprt_code": code,
-                        "accounts": accounts,
-                        "rcept_no": str(rcept_no) if rcept_no else None,
-                    })
-            elif report:
-                # DART structured statements are not available for these early years.
-                # Keep an observation only when the original filing yields actual values.
-                rcept_no = str(report["rcept_no"])
-                document = client.unzip_text(client.download_document(rcept_no))
-                values = extract_legacy(document, CFG["financial_accounts"])
-                # extract_legacy returns normalized field keys, whereas transform()
-                # resolves DART account labels. Map each value back to its first
-                # configured Korean account label before running the common pipeline.
-                core_fields = (
-                    "revenue", "operating_profit", "net_income",
-                    "assets", "liabilities", "equity",
+            if accounts:
+                rcept_no = (
+                    accounts[0].get("rcept_no")
+                    or (report or {}).get("rcept_no")
                 )
-                if any(values.get(key) is not None for key in core_fields):
-                    accounts = [
-                        {
-                            "account_nm": CFG["financial_accounts"][key][0],
-                            "thstrm_amount": value,
-                        }
-                        for key, value in values.items()
-                        if value is not None and CFG["financial_accounts"].get(key)
-                    ]
-                    rows.append({
-                        "year": year,
-                        "report_type": label,
-                        "reprt_code": code,
-                        "accounts": accounts,
-                        "rcept_no": rcept_no,
-                    })
+                rows.append({
+                    "year": year,
+                    "report_type": label,
+                    "reprt_code": code,
+                    "accounts": accounts,
+                    "rcept_no": str(rcept_no) if rcept_no else None,
+                })
         except Exception as exc:
             print(f"WARN {year} {code}: {exc}", file=sys.stderr)
 
@@ -241,12 +216,17 @@ metadata = {
     "updated_at": pd.Timestamp.now(tz="UTC").isoformat(),
     "rows": int(len(out)),
     "reports": int(len(raw)),
+    "financial_data_start_year": 2015,
+    "report_archive_start_year": START_YEAR,
     "revenue_observations": int(out["revenue"].notna().sum()),
+    "operating_profit_observations": int(out["operating_profit"].notna().sum()),
+    "net_income_observations": int(out["net_income"].notna().sum()),
     "note": (
-        "OpenDART financial statements are used from 2015 onward. "
-        "Earlier periods are included only when original-report parsing "
-        "returns actual values. Report IDs are taken from the matching "
-        "financial statement response or the exact fiscal-period filing."
+        "Numeric financial observations use structured OpenDART statements "
+        "from 2015 onward. Filing metadata are archived from the configured "
+        "start year; 2010-2014 amounts are excluded until an original-report "
+        "table parser is validated. Report IDs are matched to the relevant "
+        "fiscal-period filing."
     ),
 }
 (ROOT / "data/processed/metadata.json").write_text(
