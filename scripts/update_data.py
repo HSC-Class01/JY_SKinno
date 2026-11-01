@@ -11,7 +11,7 @@ import yaml
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from src.dart_client import DartClient
+from src.dart_client import DartClient, DartError
 from src.normalize import REPORT_NAMES, transform
 from src.legacy import extract_legacy
 
@@ -32,16 +32,17 @@ for output_dir in (
 
 client = DartClient(os.environ.get("DART_API_KEY"))
 
-# Fail before touching output files if the configured DART ID points to another issuer.
-profile = client.company(CORP_CODE)
-actual_stock_code = str(profile.get("stock_code", "")).zfill(6)
-actual_name = str(profile.get("corp_name", ""))
-if actual_stock_code != STOCK_CODE:
-    raise RuntimeError(
-        "DART company identity mismatch: "
-        f"configured={COMPANY['name']} ({STOCK_CODE}/{CORP_CODE}), "
-        f"API={actual_name} ({actual_stock_code}/{CORP_CODE}). "
-        "No output files were overwritten."
+# Verify the issuer using DART company profile. If that endpoint alone is
+# temporarily unavailable, the periodic-report search below provides a second
+# official DART identity check before any output file is written.
+profile = None
+try:
+    profile = client.company(CORP_CODE)
+except DartError as exc:
+    print(
+        f"WARN: DART company profile unavailable; "
+        f"will verify against official filing metadata: {exc}",
+        file=sys.stderr,
     )
 
 # Search a filing window wide enough to include the next-year annual report.
@@ -50,6 +51,51 @@ report_end = (today + pd.Timedelta(days=120)).strftime("%Y%m%d")
 all_reports = client.reports(
     CORP_CODE, f"{START_YEAR}0101", report_end, pblntf_ty="A"
 )
+
+identity_records = [
+    report for report in all_reports
+    if str(report.get("corp_code", "")).zfill(8) == CORP_CODE
+]
+if profile is not None:
+    actual_stock_code = str(profile.get("stock_code", "")).zfill(6)
+    actual_name = str(profile.get("corp_name", ""))
+    if actual_stock_code != STOCK_CODE:
+        raise RuntimeError(
+            "DART company identity mismatch: "
+            f"configured={COMPANY['name']} ({STOCK_CODE}/{CORP_CODE}), "
+            f"API={actual_name} ({actual_stock_code}/{CORP_CODE}). "
+            "No output files were overwritten."
+        )
+else:
+    # A failed company-profile request must not silently disable validation.
+    # Require the independently returned DART filing records to identify the
+    # exact stock code and the expected issuer name.
+    observed_stock_codes = {
+        str(report.get("stock_code") or "").strip().zfill(6)
+        for report in identity_records
+        if str(report.get("stock_code") or "").strip()
+    }
+    observed_names = {
+        str(report.get("corp_name") or "").strip()
+        for report in identity_records
+        if str(report.get("corp_name") or "").strip()
+    }
+    if (
+        STOCK_CODE not in observed_stock_codes
+        or not observed_names
+        or not all(
+            ("SK이노베이션" in name or "SK Innovation" in name)
+            for name in observed_names
+        )
+    ):
+        raise RuntimeError(
+            "DART issuer could not be verified from filing metadata: "
+            f"corp_code={CORP_CODE}, stock_codes={sorted(observed_stock_codes)}, "
+            f"names={sorted(observed_names)}. "
+            "No output files were overwritten."
+        )
+    actual_stock_code = STOCK_CODE
+    actual_name = sorted(observed_names)[0]
 
 # Keep only this issuer's periodic reports and verify the issuer on each row.
 periodic_reports = []
