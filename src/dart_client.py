@@ -44,7 +44,8 @@ class DartClient:
         return self.get_json("company", {"corp_code": corp_code})
 
     def reports(
-        self, corp_code: str, start: str, end: str, page_count: int = 100
+        self, corp_code: str, start: str, end: str, page_count: int = 100,
+        pblntf_ty: str | None = "A",
     ) -> list[dict]:
         results = []
         page = 1
@@ -55,6 +56,7 @@ class DartClient:
                 "end_de": end,
                 "page_no": page,
                 "page_count": page_count,
+                "pblntf_ty": pblntf_ty,
                 "sort": "date",
                 "sort_mth": "asc",
             })
