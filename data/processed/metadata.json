@@ -7,13 +7,13 @@
     "fs_div": "CFS",
     "verified_corp_name": "SK이노베이션(주)"
   },
-  "updated_at": "2026-11-01T09:34:42.633773+00:00",
+  "updated_at": "2026-11-01T09:43:41.135025+00:00",
   "rows": 43,
   "reports": 67,
   "financial_data_start_year": 2015,
   "report_archive_start_year": 2010,
   "revenue_observations": 43,
   "operating_profit_observations": 43,
-  "net_income_observations": 35,
+  "net_income_observations": 42,
   "note": "Numeric financial observations use structured OpenDART statements from 2015 onward. Filing metadata are archived from the configured start year; 2010-2014 amounts are excluded until an original-report table parser is validated. Report IDs are matched to the relevant fiscal-period filing."
 }
