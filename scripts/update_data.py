@@ -47,13 +47,16 @@ if actual_stock_code != STOCK_CODE:
 # Search a filing window wide enough to include the next-year annual report.
 today = pd.Timestamp.now().normalize()
 report_end = (today + pd.Timedelta(days=120)).strftime("%Y%m%d")
-all_reports = client.reports(CORP_CODE, f"{START_YEAR}0101", report_end)
+all_reports = client.reports(
+    CORP_CODE, f"{START_YEAR}0101", report_end, pblntf_ty="A"
+)
 
 # Keep only this issuer's periodic reports and verify the issuer on each row.
 periodic_reports = []
 for report in all_reports:
     report_corp = str(report.get("corp_code", "")).zfill(8)
-    report_stock = str(report.get("stock_code", "")).zfill(6)
+    report_stock = str(report.get("stock_code") or "").strip()
+    report_stock = report_stock.zfill(6) if report_stock else ""
     report_name = str(report.get("report_nm", ""))
     if report_corp != CORP_CODE or report_stock not in ("", STOCK_CODE):
         continue
