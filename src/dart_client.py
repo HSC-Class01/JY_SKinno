@@ -2,6 +2,8 @@ from __future__ import annotations
 import io
 import zipfile
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 
 BASE = "https://opendart.fss.or.kr/api"
@@ -19,16 +21,44 @@ class DartClient:
             raise DartError("DART_API_KEY is not set")
         self.api_key = api_key
         self.session = requests.Session()
-        self.session.headers.update({"User-Agent": "JY_SKinno-DART-Agent/2.0"})
+        retry = Retry(
+            total=4,
+            connect=4,
+            read=3,
+            status=3,
+            backoff_factor=1.5,
+            status_forcelist=(429, 500, 502, 503, 504),
+            allowed_methods=frozenset({"GET"}),
+            respect_retry_after_header=True,
+        )
+        adapter = HTTPAdapter(
+            max_retries=retry,
+            pool_connections=4,
+            pool_maxsize=4,
+        )
+        self.session.mount("https://", adapter)
+        self.session.mount("http://", adapter)
+        self.session.headers.update({"User-Agent": "JY_SKinno-DART-Agent/2.1"})
 
     def get_json(self, endpoint: str, params: dict) -> dict:
         query = dict(params)
         query["crtfc_key"] = self.api_key
-        response = self.session.get(
-            f"{BASE}/{endpoint}.json", params=query, timeout=60
-        )
-        response.raise_for_status()
-        data = response.json()
+        try:
+            response = self.session.get(
+                f"{BASE}/{endpoint}.json",
+                params=query,
+                timeout=(15, 60),
+            )
+            response.raise_for_status()
+            data = response.json()
+        except requests.exceptions.RequestException as exc:
+            raise DartError(
+                f"OpenDART network request failed for {endpoint}: {exc}"
+            ) from exc
+        except ValueError as exc:
+            raise DartError(
+                f"OpenDART returned invalid JSON for {endpoint}: {exc}"
+            ) from exc
         status = str(data.get("status", ""))
         # DART 013 means there is no filing for the requested period.
         if status == "013":
